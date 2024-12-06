@@ -1,7 +1,18 @@
+import subprocess
 import sys
 import streamlit as st
+import os
 
-# Check for required modules
+# Function to install missing packages
+def install_packages(packages):
+    for package in packages:
+        try:
+            __import__(package)
+        except ImportError:
+            st.warning(f"Installing {package}...")
+            subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+# List of required packages
 required_packages = [
     "pandas",
     "matplotlib",
@@ -11,14 +22,9 @@ required_packages = [
     "streamlit",
 ]
 
-missing_packages = [pkg for pkg in required_packages if pkg not in sys.modules]
+install_packages(required_packages)
 
-if missing_packages:
-    st.error(f"The following packages are missing: {', '.join(missing_packages)}. "
-             "Please install them using pip before running the app.")
-    st.stop()
-
-# Import libraries after ensuring dependencies
+# Import libraries after installation
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sb
@@ -34,25 +40,30 @@ import warnings
 # Suppress warnings
 warnings.filterwarnings('ignore')
 
+# Streamlit app
+st.title("Wine Quality Analysis App")
+
 # Load Dataset
 uploaded_file = st.file_uploader("Upload the Wine Quality Dataset (CSV file)", type="csv")
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
     
-    st.title("Wine Quality Analysis App")
-    st.write("Dataset Overview:")
+    st.subheader("Dataset Overview")
     st.dataframe(df.head())
     
     # Show dataset info
-    st.write("Dataset Info:")
-    st.text(df.info())
+    st.subheader("Dataset Info")
+    buffer = io.StringIO()
+    df.info(buf=buffer)
+    s = buffer.getvalue()
+    st.text(s)
 
     # Show statistics
-    st.write("Dataset Statistics:")
+    st.subheader("Dataset Statistics")
     st.dataframe(df.describe().T)
 
     # Check for missing values
-    st.write("Missing Values in the Dataset:")
+    st.subheader("Missing Values in the Dataset")
     missing_values = df.isnull().sum()
     st.dataframe(missing_values[missing_values > 0])
 
@@ -62,20 +73,20 @@ if uploaded_file is not None:
             df[col] = df[col].fillna(df[col].mean())
 
     # Display histograms for numerical features
-    st.write("Histograms of Numerical Features:")
+    st.subheader("Histograms of Numerical Features")
     numeric_columns = df.select_dtypes(include=["float64", "int64"]).columns
-    fig, axes = plt.subplots(nrows=4, ncols=3, figsize=(15, 10))  # Adjust grid size
+    fig, axes = plt.subplots(nrows=4, ncols=3, figsize=(15, 10))
     axes = axes.flatten()
     for idx, col in enumerate(numeric_columns):
         df[col].hist(ax=axes[idx], bins=20)
         axes[idx].set_title(col)
-    for i in range(len(numeric_columns), len(axes)):  # Hide unused axes
+    for i in range(len(numeric_columns), len(axes)):
         fig.delaxes(axes[i])
     plt.tight_layout()
     st.pyplot(fig)
 
     # Correlation heatmap
-    st.write("Correlation Heatmap:")
+    st.subheader("Correlation Heatmap")
     fig, ax = plt.subplots(figsize=(12, 8))
     sb.heatmap(df.corr(), annot=True, cmap="coolwarm", ax=ax)
     st.pyplot(fig)
@@ -102,11 +113,11 @@ if uploaded_file is not None:
     xtest = scaler.transform(xtest)
 
     # Model Training
-    models = [LogisticRegression(), XGBClassifier(), SVC(kernel='rbf')]
+    models = [LogisticRegression(), XGBClassifier(use_label_encoder=False, eval_metric='logloss'), SVC(kernel='rbf')]
     model_names = ["Logistic Regression", "XGBoost Classifier", "SVC"]
     model_accuracies = []
 
-    st.write("Model Performance:")
+    st.subheader("Model Performance")
     for i, model in enumerate(models):
         model.fit(xtrain, ytrain)
         train_acc = roc_auc_score(ytrain, model.predict(xtrain))
@@ -118,7 +129,7 @@ if uploaded_file is not None:
 
     # Display Confusion Matrix for Best Model
     best_model_idx = model_accuracies.index(max(model_accuracies))
-    st.write(f"The best-performing model is: **{model_names[best_model_idx]}**")
+    st.subheader(f"The Best-Performing Model: {model_names[best_model_idx]}")
 
     cm = confusion_matrix(ytest, models[best_model_idx].predict(xtest))
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=[0, 1])
@@ -126,14 +137,9 @@ if uploaded_file is not None:
     disp.plot(ax=ax)
     st.pyplot(fig)
 
-    # Histogram of a specific feature
-    st.write("Wine Quality Histogram")
-
-    # Allow the user to choose a feature for histogram after uploading the file
+    # Allow user to select a feature for histogram
+    st.subheader("Feature Histogram")
     feature = st.selectbox('Select a feature for histogram:', df.columns)
-
-    # Display the histogram for the selected feature
-    st.subheader(f'Histogram of {feature}')
     fig, ax = plt.subplots()
     ax.hist(df[feature], bins=20, color='blue', edgecolor='black')
     ax.set_xlabel(feature)
