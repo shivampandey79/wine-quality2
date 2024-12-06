@@ -1,3 +1,24 @@
+import os
+import subprocess
+import sys
+
+# Ensure necessary packages are installed
+required_packages = [
+    "streamlit",
+    "pandas",
+    "matplotlib",
+    "seaborn",
+    "scikit-learn",
+    "xgboost",
+]
+
+for package in required_packages:
+    try:
+        __import__(package)
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+# Importing libraries after ensuring installation
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -119,4 +140,3 @@ if uploaded_file is not None:
     ax.set_xlabel(feature)
     ax.set_ylabel('Frequency')
     st.pyplot(fig)
-
