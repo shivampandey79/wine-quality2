@@ -1,25 +1,24 @@
-import os
-import subprocess
 import sys
+import streamlit as st
 
-# Ensure necessary packages are installed
+# Check for required modules
 required_packages = [
-    "streamlit",
     "pandas",
     "matplotlib",
     "seaborn",
     "scikit-learn",
     "xgboost",
+    "streamlit",
 ]
 
-for package in required_packages:
-    try:
-        __import__(package)
-    except ImportError:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+missing_packages = [pkg for pkg in required_packages if pkg not in sys.modules]
 
-# Importing libraries after ensuring installation
-import streamlit as st
+if missing_packages:
+    st.error(f"The following packages are missing: {', '.join(missing_packages)}. "
+             "Please install them using pip before running the app.")
+    st.stop()
+
+# Import libraries after ensuring dependencies
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sb
@@ -30,9 +29,9 @@ from sklearn.svm import SVC
 from xgboost import XGBClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.impute import SimpleImputer
+import warnings
 
 # Suppress warnings
-import warnings
 warnings.filterwarnings('ignore')
 
 # Load Dataset
