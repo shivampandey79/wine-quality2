@@ -1,16 +1,23 @@
-import subprocess
 import sys
 import streamlit as st
-import os
+import importlib
 
-# Function to install missing packages
-def install_packages(packages):
+# Function to check and warn about missing packages
+def check_required_packages(packages):
+    missing_packages = []
     for package in packages:
         try:
-            __import__(package)
+            importlib.import_module(package)
         except ImportError:
-            st.warning(f"Installing {package}...")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+            missing_packages.append(package)
+    if missing_packages:
+        st.error(
+            f"The following packages are missing: {', '.join(missing_packages)}. "
+            "Please install them using pip before running the app.\n"
+            "Run the following command in your terminal:\n"
+            f"`pip install {' '.join(missing_packages)}`"
+        )
+        st.stop()
 
 # List of required packages
 required_packages = [
@@ -22,9 +29,10 @@ required_packages = [
     "streamlit",
 ]
 
-install_packages(required_packages)
+# Check for required packages
+check_required_packages(required_packages)
 
-# Import libraries after installation
+# Import libraries after validation
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sb
@@ -53,11 +61,10 @@ if uploaded_file is not None:
     
     # Show dataset info
     st.subheader("Dataset Info")
-    buffer = io.StringIO()
-    df.info(buf=buffer)
-    s = buffer.getvalue()
-    st.text(s)
-
+    buffer = st.container()
+    with st.expander("View Dataset Info"):
+        st.text(df.info())
+    
     # Show statistics
     st.subheader("Dataset Statistics")
     st.dataframe(df.describe().T)
